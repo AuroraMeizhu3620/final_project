@@ -18,7 +18,7 @@ def generate_tasks(title, description, tags):
     )
 
     response = client.chat.completions.create(
-        model="gpt-5",
+        model="gpt-5-nano",
         messages=[{"role": "user", "content": prompt}],
         max_completion_tokens=5000,
     )
