@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} — LaunchShare{% endblock %}
+
+{% block content %}
+<div class="post-detail">
+    <a href="{{ url_for('index') }}" class="back-link">&#8592; Back to Feed</a>
+
+    <div class="post-header">
+        <h1>{{ post.title }}</h1>
+        {% if post.tags %}
+        <div class="tags" style="margin-top: 0.75rem;">
+            {% for tag in post.tags.split(',') %}
+                <span class="tag">{{ tag.strip() }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div class="post-meta">
+            <span class="post-author-badge">&#128100; {{ post.author.username if post.author else 'Unknown' }}</span>
+            <span class="post-date">{{ post.created_at.strftime('%B %d, %Y') }}</span>
+        </div>
+    </div>
+
+    <div class="post-description">
+        <h3>The Tip</h3>
+        <p>{{ post.description }}</p>
+    </div>
+
+    {% if post.tasks %}
+    <div class="task-section">
+        <div class="task-section-title">
+            &#128640; Mission Plan
+            <span style="font-size:0.85rem; color:var(--text-muted); font-weight:400;">{{ post.tasks|length }} tasks &bull; {{ post.tasks|length * 10 }} XP available</span>
+        </div>
+
+        {% if not current_user.is_authenticated %}
+        <div class="login-prompt">
+            &#128274; <a href="{{ url_for('login') }}">Log in</a> or <a href="{{ url_for('register') }}">sign up</a> to start tracking this mission and earn XP.
+        </div>
+        {% elif not is_tracking %}
+        <form method="POST" action="{{ url_for('start_tracking', post_id=post.id) }}" style="margin-bottom: 1.25rem;">
+            <button type="submit" class="btn btn-primary">&#128640; Start This Mission</button>
+        </form>
+        {% endif %}
+
+        <ul class="task-list">
+            {% for task in post.tasks %}
+            <li class="task-item {% if is_tracking and user_tasks.get(task.id) and user_tasks[task.id].completed %}completed{% endif %}"
+                id="task-{{ task.id }}">
+                <span class="task-num">{{ loop.index }}</span>
+                {% if is_tracking and user_tasks.get(task.id) %}
+                    <input type="checkbox"
+                           class="task-checkbox"
+                           data-task-id="{{ task.id }}"
+                           {% if user_tasks[task.id].completed %}checked{% endif %}>
+                {% else %}
+                    <span class="task-bullet">&#9675;</span>
+                {% endif %}
+                <span class="task-content">{{ task.content }}</span>
+                {% if is_tracking and user_tasks.get(task.id) and user_tasks[task.id].completed %}
+                    <span style="margin-left:auto; color:var(--gold); font-size:0.8rem; flex-shrink:0;">+10 XP</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+
+        {% if is_tracking %}
+        <p class="tracking-note">&#9989; You're on this mission. <a href="{{ url_for('my_tasks') }}">View all my missions &#8594;</a></p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">&#129300;</div>
+        <p>No tasks were generated for this post.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('.task-checkbox').forEach(function(checkbox) {
+    checkbox.addEventListener('change', function() {
+        var taskId = this.dataset.taskId;
+        var li = document.getElementById('task-' + taskId);
+        fetch('/task/' + taskId + '/toggle', { method: 'POST' })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.completed) {
+                    li.classList.add('completed', 'pop');
+                    var existing = li.querySelector('span[style]');
+                    if (!existing) {
+                        li.insertAdjacentHTML('beforeend',
+                            '<span style="margin-left:auto; color:var(--gold); font-size:0.8rem; flex-shrink:0;">+10 XP</span>');
+                    }
+                } else {
+                    li.classList.remove('completed');
+                    var xpSpan = li.querySelector('span[style]');
+                    if (xpSpan) xpSpan.remove();
+                }
+                setTimeout(function() { li.classList.remove('pop'); }, 400);
+            });
+    });
+});
+</script>
+{% endblock %}

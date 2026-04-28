@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% block title %}My Missions — LaunchShare{% endblock %}
+
+{% block content %}
+
+{% if posts_tasks %}
+    <!-- ── XP Banner ── -->
+    {% set all_tasks = [] %}
+    {% set done_tasks = [] %}
+    {% for group in posts_tasks %}
+        {% for ut in group.tasks %}
+            {% if all_tasks.append(ut) %}{% endif %}
+            {% if ut.completed and done_tasks.append(ut) %}{% endif %}
+        {% endfor %}
+    {% endfor %}
+
+    {% set total_xp = done_tasks | length * 10 %}
+    {% set total_tasks = all_tasks | length %}
+
+    {% if total_xp < 50 %}
+        {% set level_name = "Cadet" %}
+        {% set level_icon = "&#128640;" %}
+        {% set next_xp = 50 %}
+        {% set prev_xp = 0 %}
+    {% elif total_xp < 150 %}
+        {% set level_name = "Explorer" %}
+        {% set level_icon = "&#127759;" %}
+        {% set next_xp = 150 %}
+        {% set prev_xp = 50 %}
+    {% elif total_xp < 300 %}
+        {% set level_name = "Navigator" %}
+        {% set level_icon = "&#127381;" %}
+        {% set next_xp = 300 %}
+        {% set prev_xp = 150 %}
+    {% else %}
+        {% set level_name = "Astronaut" %}
+        {% set level_icon = "&#128119;" %}
+        {% set next_xp = total_xp + 1 %}
+        {% set prev_xp = 300 %}
+    {% endif %}
+
+    {% set bar_pct = [((total_xp - prev_xp) / (next_xp - prev_xp) * 100) | int, 100] | min %}
+
+    <div class="xp-banner">
+        <div class="xp-level-badge">{{ level_icon }}</div>
+        <div class="xp-info">
+            <div class="level-label">{{ level_name }}</div>
+            <h3>{{ total_xp }} XP earned</h3>
+            <div class="xp-bar-container">
+                <div class="xp-bar" style="width: {{ bar_pct }}%"></div>
+            </div>
+            <div class="xp-label">
+                {% if level_name != "Astronaut" %}
+                    {{ total_xp }} / {{ next_xp }} XP to next level
+                {% else %}
+                    Max level reached &#11088;
+                {% endif %}
+            </div>
+        </div>
+        <div class="xp-stat">
+            <div class="stat-value">{{ done_tasks | length }}</div>
+            <div class="stat-label">Tasks Done</div>
+        </div>
+        <div class="xp-stat">
+            <div class="stat-value">{{ posts_tasks | list | length }}</div>
+            <div class="stat-label">Missions</div>
+        </div>
+    </div>
+
+    <!-- ── Mission Cards ── -->
+    {% for group in posts_tasks %}
+        {% set completed_count = group.tasks | selectattr('completed') | list | length %}
+        {% set total_count = group.tasks | length %}
+        {% set pct = (completed_count / total_count * 100) | int %}
+        {% set group_xp = completed_count * 10 %}
+
+        <div class="task-group-card {% if completed_count == total_count %}mission-complete{% endif %}"
+             id="group-{{ group.post.id }}">
+
+            <div class="mission-header">
+                <div class="mission-title">
+                    <a href="{{ url_for('post_detail', post_id=group.post.id) }}">{{ group.post.title }}</a>
+                </div>
+                {% if completed_count == total_count %}
+                    <span class="mission-badge complete">&#9989; Mission Complete</span>
+                {% else %}
+                    <span class="mission-badge in-progress">&#128640; In Progress</span>
+                {% endif %}
+            </div>
+
+            <div class="mission-progress-bar-container">
+                <div class="mission-progress-bar" style="width: {{ pct }}%"></div>
+            </div>
+            <div class="mission-progress-label">
+                <span>{{ completed_count }} / {{ total_count }} tasks</span>
+                <span class="pct">{{ pct }}%</span>
+            </div>
+
+            <ul class="task-list">
+                {% for ut in group.tasks %}
+                <li class="task-item {% if ut.completed %}completed{% endif %}" id="task-{{ ut.task_id }}">
+                    <input type="checkbox"
+                           class="task-checkbox"
+                           data-task-id="{{ ut.task_id }}"
+                           data-group-id="{{ group.post.id }}"
+                           {% if ut.completed %}checked{% endif %}>
+                    <span class="task-content">{{ ut.task.content }}</span>
+                    {% if ut.completed %}<span style="margin-left:auto; color: var(--gold); font-size:0.8rem; flex-shrink:0;">+10 XP</span>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+
+            <div style="margin-top: 0.75rem;">
+                <span class="xp-earned">&#11088; {{ group_xp }} XP earned from this mission</span>
+            </div>
+        </div>
+    {% endfor %}
+
+{% else %}
+    <div class="empty-state">
+        <div class="empty-icon">&#128640;</div>
+        <h2>No missions started yet!</h2>
+        <p>Browse the feed and start a mission to begin earning XP.</p>
+        <a href="{{ url_for('index') }}" class="btn btn-primary">Browse Tips</a>
+    </div>
+{% endif %}
+
+<script>
+document.querySelectorAll('.task-checkbox').forEach(function(checkbox) {
+    checkbox.addEventListener('change', function() {
+        var taskId = this.dataset.taskId;
+        var groupId = this.dataset.groupId;
+        var li = document.getElementById('task-' + taskId);
+
+        fetch('/task/' + taskId + '/toggle', { method: 'POST' })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (data.completed) {
+                    li.classList.add('completed', 'pop');
+                    li.querySelector('.task-content').insertAdjacentHTML(
+                        'afterend', '<span style="margin-left:auto; color:var(--gold); font-size:0.8rem; flex-shrink:0;">+10 XP</span>'
+                    );
+                } else {
+                    li.classList.remove('completed');
+                    var xpSpan = li.querySelector('span[style]');
+                    if (xpSpan) xpSpan.remove();
+                }
+                setTimeout(function() { li.classList.remove('pop'); }, 400);
+
+                // Update progress bar
+                var group = document.getElementById('group-' + groupId);
+                var total = group.querySelectorAll('.task-item').length;
+                var done  = group.querySelectorAll('.task-item.completed').length;
+                var pct   = Math.round(done / total * 100);
+
+                group.querySelector('.mission-progress-bar').style.width = pct + '%';
+                var labels = group.querySelectorAll('.mission-progress-label span');
+                labels[0].textContent = done + ' / ' + total + ' tasks';
+                labels[1].textContent = pct + '%';
+
+                // Update mission badge
+                var badge = group.querySelector('.mission-badge');
+                if (done === total) {
+                    badge.className = 'mission-badge complete';
+                    badge.innerHTML = '&#9989; Mission Complete';
+                    group.classList.add('mission-complete');
+                } else {
+                    badge.className = 'mission-badge in-progress';
+                    badge.innerHTML = '&#128640; In Progress';
+                    group.classList.remove('mission-complete');
+                }
+
+                // Update XP footer
+                var xpFooter = group.querySelector('.xp-earned');
+                xpFooter.textContent = '\u2B50 ' + (done * 10) + ' XP earned from this mission';
+            });
+    });
+});
+</script>
+{% endblock %}

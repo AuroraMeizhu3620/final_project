@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LaunchShare{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="nav-logo">
+                <div class="nav-logo-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2C9 5 7 9 7 13h10c0-4-2-8-5-11z" fill="white"/>
+                        <path d="M9.5 13l-1.5 6h8l-1.5-6H9.5z" fill="white" opacity="0.7"/>
+                        <circle cx="12" cy="10" r="2" fill="#06b6d4"/>
+                        <path d="M7 14.5L4.5 17 7 16" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+                        <path d="M17 14.5L19.5 17 17 16" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+                    </svg>
+                </div>
+                Launch<span>Share</span>
+            </a>
+
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}">Feed</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('create_post') }}">+ Share Tip</a>
+                    <a href="{{ url_for('my_tasks') }}">My Missions</a>
+                    <span class="nav-user">&#128100; {{ current_user.username }}</span>
+                    <a href="{{ url_for('logout') }}">Log Out</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}">Log In</a>
+                    <a href="{{ url_for('register') }}" class="nav-register">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

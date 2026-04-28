@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Log In — LaunchShare{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-logo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2C9 5 7 9 7 13h10c0-4-2-8-5-11z" fill="white"/>
+                    <path d="M9.5 13l-1.5 6h8l-1.5-6H9.5z" fill="white" opacity="0.7"/>
+                    <circle cx="12" cy="10" r="2" fill="#06b6d4"/>
+                </svg>
+            </div>
+            LaunchShare
+        </div>
+
+        <h1>Welcome Back</h1>
+        <p class="subtitle">Log in to continue your missions.</p>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Your username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Your password" required>
+            </div>
+
+            <div class="form-group form-check">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Remember me</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">Log In &#128640;</button>
+        </form>
+
+        <p class="auth-switch">Don't have an account? <a href="{{ url_for('register') }}">Sign up free</a></p>
+    </div>
+</div>
+{% endblock %}
